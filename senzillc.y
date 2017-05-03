@@ -20,6 +20,7 @@ int yyerror(char *);
 int yylex();
 
 int errors; /* Error Count */ 
+extern int line_num;
 /*------------------------------------------------------------------------- 
 The following support backpatching 
 -------------------------------------------------------------------------*/ 
@@ -108,6 +109,7 @@ id_seq : /* empty */
 
 commands : /* empty */ 
     | commands command ';' 
+    | error { yyerrok; }
 ; 
 
 command : SKIP 
@@ -173,7 +175,7 @@ YYERROR
 int yyerror ( char *s ) /* Called by yyparse on error */ 
 { 
   errors++; 
-  printf ("%s\n", s); 
+  printf ("%s at line %d\n", s, line_num); 
   return 0;
 }
 /**************************** End Grammar File ***************************/ 
