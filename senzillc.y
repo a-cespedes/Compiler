@@ -18,7 +18,7 @@ C Libraries, Symbol Table, Code Generator & other C code
 
 int yyerror(char *);
 int yylex();
-
+char *idf;
 int errors; /* Error Count */ 
 extern int line_num;
 /*------------------------------------------------------------------------- 
@@ -81,7 +81,7 @@ TOKENS
 %token SKIP THEN ELSE FI DO END 
 %token INTEGER READ WRITE LET IN 
 %token ASSGNOP 
-
+%type <id> variable
 /*========================================================================= 
 OPERATOR PRECEDENCE 
 =========================================================================*/ 
@@ -100,11 +100,24 @@ program : LET declarations IN { gen_code( DATA, data_location() - 1 ); }
 ; 
 
 declarations : /* empty */ 
-    | INTEGER id_seq IDENTIFIER '.' { install( $3 ); } 
+    | INTEGER id_seq dec_variable '.' { /*install( $3 );*/ } 
 ; 
 
 id_seq : /* empty */ 
-    | id_seq IDENTIFIER ',' { install( $2 ); } 
+    | id_seq dec_variable ',' { /*install( $2 );*/ } 
+; 
+
+dec_variable : IDENTIFIER '[' NUMBER ']' { int i;for(i = 0;i != $3;i++){
+idf = strdup($1);
+sprintf(idf,"%s[%d]",$1,i);
+install(idf);free(idf);} }
+    | IDENTIFIER { install( $1 ); } 
+; 
+
+variable : IDENTIFIER '[' NUMBER ']' { idf = strdup($1);
+sprintf(idf,"%s[%d]",$1,$3);
+$$ = strdup(idf);free(idf);}
+    | IDENTIFIER { } 
 ; 
 
 commands : /* empty */ 
@@ -113,9 +126,9 @@ commands : /* empty */
 ; 
 
 command : SKIP 
-   | READ IDENTIFIER { gen_code( READ_INT, context_check( $2 ) ); } 
+   | READ variable { gen_code( READ_INT, context_check( $2 ) ); } 
    | WRITE exp { gen_code( WRITE_INT, 0 ); } 
-   | IDENTIFIER ASSGNOP exp { gen_code( STORE, context_check( $1 ) ); } 
+   | variable ASSGNOP exp { gen_code( STORE, context_check( $1 ) ); } 
    | IF bool_exp { $1 = (struct lbs *) newlblrec(); $1->for_jmp_false = reserve_loc(); } 
    THEN commands { $1->for_goto = reserve_loc(); } ELSE { 
      back_patch( $1->for_jmp_false, JMP_FALSE, gen_label() ); 
@@ -131,7 +144,7 @@ bool_exp : exp '<' exp { gen_code( LT, 0 ); }
 ;
 
 exp : NUMBER { gen_code( LD_INT, $1 ); } 
-   | IDENTIFIER { gen_code( LD_VAR, context_check( $1 ) ); } 
+   | variable { gen_code( LD_VAR, context_check( $1 ) ); } 
    | exp '+' exp { gen_code( ADD, 0 ); } 
    | exp '-' exp { gen_code( SUB, 0 ); } 
    | exp '*' exp { gen_code( MULT, 0 ); } 
