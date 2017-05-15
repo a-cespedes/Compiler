@@ -19,7 +19,11 @@ C Libraries, Symbol Table, Code Generator & other C code
 int yyerror(char *);
 int yylex();
 char *idf;
+char *actual_func = "_GLOBAL";
 int errors; /* Error Count */ 
+int label = 1;
+int param = 0;
+int *params;
 extern int line_num;
 /*------------------------------------------------------------------------- 
 The following support backpatching 
@@ -36,13 +40,27 @@ struct lbs * newlblrec() /* Allocate space for the labels */
 }
 
 /*------------------------------------------------------------------------- 
+The following support functions 
+-------------------------------------------------------------------------*/ 
+/*char *generateLabel()  Allocate space for the labels 
+{ 
+   sprintf(idf,"l%d",label);
+   label++;
+   return strdup(idf); 
+}*/
+
+void set_scope(char* func_name){
+   actual_func = strdup(func_name);
+}
+
+/*------------------------------------------------------------------------- 
 Install identifier & check if previously defined. 
 -------------------------------------------------------------------------*/ 
-void install ( char *sym_name ) 
+void install ( char *sym_name,char *actual_func, int param) 
 { 
-  symrec *s = getsym (sym_name); 
-  if (s == 0) 
-    s = putsym (sym_name); 
+  symrec *s = getsym (sym_name,actual_func);
+  if (s == 0)
+    s = putparam (sym_name,actual_func,param); 
   else { 
     char message[ 100 ];
     sprintf( message, "%s is already defined\n", sym_name ); 
@@ -51,13 +69,58 @@ void install ( char *sym_name )
 } 
 
 /*------------------------------------------------------------------------- 
+Install array identifier & check if previously defined. 
+-------------------------------------------------------------------------*/ 
+void install_array( char *sym_name, int size,char *actual_func,int param){
+  symrec *s = getsym (sym_name,actual_func); 
+  if (s == 0) {
+    int i;
+    for(i = 0;i != size;i++){
+      idf = strdup(sym_name);
+      sprintf(idf,"%s[%d]",sym_name,i);
+      install(idf,actual_func,param);
+      free(idf);
+    }
+  }
+  else { 
+    char message[ 100 ];
+    sprintf( message, "%s is already defined\n", sym_name ); 
+    yyerror( message );
+  } 
+  
+}
+
+/*------------------------------------------------------------------------- 
 If identifier is defined, generate code 
 -------------------------------------------------------------------------*/ 
 int context_check( char *sym_name ) 
 { 
-  symrec *identifier = getsym( sym_name ); 
+  symrec *identifier = getsym( sym_name,actual_func ); 
   return identifier->offset;
 } 
+
+/*------------------------------------------------------------------------- 
+If array identifier is defined, return variable
+-------------------------------------------------------------------------*/ 
+char* check_array( char *sym_name, int offset,char *actual_func){
+  idf = strdup(sym_name);
+  sprintf(idf,"%s[%d]",sym_name,offset);
+  getsym (sym_name,actual_func);
+  return strdup(idf);
+}
+/*------------------------------------------------------------------------- 
+If function identifier is defined, return label
+-------------------------------------------------------------------------*/ 
+int check_function(char* func_name){
+  symrec *s = getsym(func_name,func_name);
+  if(!s){
+    char message[ 100 ];
+    sprintf( message, "Function %s is not defined\n", func_name ); 
+    yyerror( message );
+    return -1;
+  }
+  else {return s->label;}
+}
 
 /*========================================================================= 
 SEMANTIC RECORDS 
@@ -78,10 +141,11 @@ TOKENS
 %token <intval> NUMBER /* Simple integer */ 
 %token <id> IDENTIFIER /* Simple identifier */ 
 %token <lbls> IF WHILE /* For backpatching labels */ 
-%token SKIP THEN ELSE FI DO END 
+%token SKIP THEN ELSE FI DO END DEF RETURN
 %token INTEGER READ WRITE LET IN 
 %token ASSGNOP 
 %type <id> variable
+%type <id> dec_variable
 /*========================================================================= 
 OPERATOR PRECEDENCE 
 =========================================================================*/ 
@@ -95,28 +159,54 @@ GRAMMAR RULES for the Simple language
 
 %% 
 
-program : LET declarations IN { gen_code( DATA, data_location() - 1 ); } 
-          commands END { gen_code( HALT, 0 ); YYACCEPT; } 
+/*========================================================================= 
+FUNCTION RULES for the Simple language 
+=========================================================================*/ 
+
+functions : /* empty */ 
+    | functions function { }
+;
+     
+function : DEF IDENTIFIER { putfunc($2,gen_label());set_scope($2); } '(' params ')'{ param = 0; } DO body_function END { gen_code( RET, 0 ); set_scope("_GLOBAL"); }
 ; 
 
+body_function : declarations { gen_code( DATA, data_location() - 1 ); } commands
+;
+
+params : INTEGER { param++; }  dec_variable          
+    | params ',' INTEGER { param++; } dec_variable   
+;
+
+function_call : IDENTIFIER { params = getparams($1);param = 0; }'(' function_call_params  ')' { gen_code( CALL, check_function($1) );set_scope($1);param = 0; }
+;
+
+function_call_params : /* empty */
+    | exp                           { gen_code( STORE, params[param] );param++; } 
+    | function_call_params ',' exp  { gen_code( STORE, params[param] );param++; } 
+;
+/*========================================================================= 
+PROGRAM RULES for the Simple language 
+=========================================================================*/ 
+program : { gen_code( CALL, -1 );gen_code( HALT, 0 ); }functions main { YYACCEPT; }
+; 
+
+main : LET declarations IN { back_patch( 0, CALL, gen_label());gen_code( DATA, data_location() - 1 ); } 
+          commands END { gen_code( RET, 0 ); }
+;
+
 declarations : /* empty */ 
-    | INTEGER id_seq dec_variable '.' { /*install( $3 );*/ } 
+    | INTEGER id_seq dec_variable '.' { } 
 ; 
 
 id_seq : /* empty */ 
-    | id_seq dec_variable ',' { /*install( $2 );*/ } 
+    | id_seq dec_variable ',' { } 
 ; 
 
-dec_variable : IDENTIFIER '[' NUMBER ']' { int i;for(i = 0;i != $3;i++){
-idf = strdup($1);
-sprintf(idf,"%s[%d]",$1,i);
-install(idf);free(idf);} }
-    | IDENTIFIER { install( $1 ); } 
+dec_variable : IDENTIFIER '[' NUMBER ']' { install_array( $1, $3, actual_func, param ); }
+    | IDENTIFIER { install( $1,actual_func, param ); } 
 ; 
 
-variable : IDENTIFIER '[' NUMBER ']' { idf = strdup($1);
-sprintf(idf,"%s[%d]",$1,$3);
-$$ = strdup(idf);free(idf);}
+variable : IDENTIFIER '[' NUMBER ']' { $$ = check_array( $1, $3, actual_func); }
     | IDENTIFIER { } 
 ; 
 
@@ -136,6 +226,7 @@ command : SKIP
    | WHILE { $1 = (struct lbs *) newlblrec(); $1->for_goto = gen_label(); } 
    bool_exp { $1->for_jmp_false = reserve_loc(); } DO commands END { gen_code( GOTO, $1->for_goto ); 
    back_patch( $1->for_jmp_false, JMP_FALSE, gen_label() ); } 
+   | function_call { }
 ;
 
 bool_exp : exp '<' exp { gen_code( LT, 0 ); } 

@@ -30,6 +30,7 @@ REGULAR EXPRESSIONS defining the tokens for the Simple language
 
 ":="                    { return(ASSGNOP); } 
 {DIGIT}+                { yylval.intval = atoi( yytext ); return(NUMBER); } 
+def                     { return(DEF); } 
 do                      { return(DO); } 
 else                    { return(ELSE); } 
 end                     { return(END); } 
@@ -39,6 +40,7 @@ in                      { return(IN); }
 integer                 { return(INTEGER); } 
 let                     { return(LET); } 
 read                    { return(READ); } 
+return                  { return(RETURN); } 
 skip                    { return(SKIP); } 
 then                    { return(THEN); } 
 while                   { return(WHILE); } 
@@ -47,7 +49,7 @@ write                   { return(WRITE); }
 "/*"                    BEGIN(comment);
 <comment>[^*\n]*        
 <comment>"*"+[^*/\n]*   
-<comment,INITIAL>\n     ++line_num;
+<comment,INITIAL>\n     ++line_num;printf("%d\n",line_num);
 <comment>"*"+"/"        BEGIN(INITIAL);
 [ \t]+                  /* eat up whitespace */ 
 .                       { return(yytext[0]);} 
