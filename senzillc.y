@@ -39,16 +39,6 @@ struct lbs * newlblrec() /* Allocate space for the labels */
    return (struct lbs *) malloc(sizeof(struct lbs)); 
 }
 
-/*------------------------------------------------------------------------- 
-The following support functions 
--------------------------------------------------------------------------*/ 
-/*char *generateLabel()  Allocate space for the labels 
-{ 
-   sprintf(idf,"l%d",label);
-   label++;
-   return strdup(idf); 
-}*/
-
 void set_scope(char* func_name){
    actual_func = strdup(func_name);
 }
