@@ -111,6 +111,33 @@ int check_function(char* func_name){
   }
   else {return s->label;}
 }
+/*------------------------------------------------------------------------- 
+Define function return variable
+-------------------------------------------------------------------------*/ 
+void install_return(char* func){
+  idf = strdup(func);
+  sprintf(idf,"_RETURN_%s",func);
+  install(idf,"_GLOBAL",param);
+  free(idf);
+}
+/*------------------------------------------------------------------------- 
+Return the return variable of a function
+-------------------------------------------------------------------------*/ 
+char* get_return_variable(char* func){
+  symrec *s = getsym (func,"_GLOBAL");
+  if (s == 0){
+    char message[ 100 ];
+    sprintf( message, "Function %s is not defined\n", func ); 
+    yyerror( message );
+    return "";
+  }
+  else { 
+    char* var = strdup(func);
+    sprintf(var,"_RETURN_%s",func);
+    return var;
+  } 
+
+}
 
 /*========================================================================= 
 SEMANTIC RECORDS 
@@ -160,14 +187,14 @@ functions : /* empty */
 function : DEF IDENTIFIER { putfunc($2,gen_label());set_scope($2); } '(' params ')'{ param = 0; } DO body_function END { gen_code( RET, 0 ); set_scope("_GLOBAL"); }
 ; 
 
-body_function : declarations { gen_code( DATA, data_location() - 1 ); } commands
+body_function : declarations commands
 ;
 
 params : INTEGER { param++; }  dec_variable          
     | params ',' INTEGER { param++; } dec_variable   
 ;
 
-function_call : IDENTIFIER { params = getparams($1);param = 0; }'(' function_call_params  ')' { gen_code( CALL, check_function($1) );set_scope($1);param = 0; }
+function_call : IDENTIFIER { idf = strdup($1);params = getparams($1);param = 0; }'(' function_call_params  ')' { gen_code( CALL, check_function($1) );set_scope($1);param = 0; }
 ;
 
 function_call_params : /* empty */
@@ -177,10 +204,10 @@ function_call_params : /* empty */
 /*========================================================================= 
 PROGRAM RULES for the Simple language 
 =========================================================================*/ 
-program : { gen_code( CALL, -1 );gen_code( HALT, 0 ); }functions main { YYACCEPT; }
+program : { gen_code( DATA, -1 );gen_code( CALL, -1 );gen_code( HALT, 0 ); }functions main { YYACCEPT; }
 ; 
 
-main : LET declarations IN { back_patch( 0, CALL, gen_label());gen_code( DATA, data_location() - 1 ); } 
+main : LET declarations IN { back_patch(0, DATA, data_location() - 1);back_patch( 1, CALL, gen_label()); } 
           commands END { gen_code( RET, 0 ); }
 ;
 
@@ -217,6 +244,8 @@ command : SKIP
    bool_exp { $1->for_jmp_false = reserve_loc(); } DO commands END { gen_code( GOTO, $1->for_goto ); 
    back_patch( $1->for_jmp_false, JMP_FALSE, gen_label() ); } 
    | function_call { }
+   | variable ASSGNOP function_call { gen_code(LD_VAR, context_check(get_return_variable(idf)));gen_code(STORE,context_check($1));}
+   | RETURN exp { install_return(actual_func);gen_code( STORE,context_check(get_return_variable(actual_func)));}
 ;
 
 bool_exp : exp '<' exp { gen_code( LT, 0 ); } 

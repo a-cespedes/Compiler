@@ -93,6 +93,8 @@ symrec * getsym (char *sym_name,char* function)
   for ( ptr = sym_table;ptr != (symrec *) 0;ptr = (symrec *)ptr->next ){
     if (strcmp (ptr->name,sym_name) == 0 && strcmp(ptr->function,function) == 0){
       return ptr; }
+    else if (strcmp (ptr->name,sym_name) == 0){
+      return ptr; }
   }
   return NULL;
 } 
