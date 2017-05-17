@@ -142,9 +142,9 @@ char* get_return_variable(char* func){
 Check parameters of a function
 -------------------------------------------------------------------------*/ 
 void check_params(){
-  if(param > funcparams->numParams){
+  if(param != funcparams->numParams){
     char message[ 100 ];
-    sprintf( message, "Function call needs %d params\n", funcparams->numParams ); 
+    sprintf( message, "Function %s called with %d params, %d are needed\n",idf,param,funcparams->numParams ); 
     yyerror( message );
   }
 }
@@ -152,8 +152,10 @@ void check_params(){
 Store parameter of a function
 -------------------------------------------------------------------------*/ 
 void process_param(){
+  if(param <= funcparams->numParams){
     gen_code( STORE, funcparams->params[param] );
     param++; 
+  }
 }
 /*------------------------------------------------------------------------- 
 Store the value of the return variable of a function
