@@ -23,7 +23,7 @@ char *actual_func = "_GLOBAL";
 int errors; /* Error Count */ 
 int label = 1;
 int param = 0;
-int *params;
+params* funcparams;
 extern int line_num;
 /*------------------------------------------------------------------------- 
 The following support backpatching 
@@ -50,7 +50,7 @@ void install ( char *sym_name,char *actual_func, int param)
 { 
   symrec *s = getsym (sym_name,actual_func);
   if (s == 0)
-    s = putparam (sym_name,actual_func,param); 
+    s = putsym (sym_name,actual_func,param); 
   else { 
     char message[ 100 ];
     sprintf( message, "%s is already defined\n", sym_name ); 
@@ -85,7 +85,7 @@ If identifier is defined, generate code
 -------------------------------------------------------------------------*/ 
 int context_check( char *sym_name ) 
 { 
-  symrec *identifier = getsym( sym_name,actual_func ); 
+  symrec *identifier = getsym( sym_name,actual_func );
   return identifier->offset;
 } 
 
@@ -137,6 +137,44 @@ char* get_return_variable(char* func){
     return var;
   } 
 
+}
+/*------------------------------------------------------------------------- 
+Check parameters of a function
+-------------------------------------------------------------------------*/ 
+void check_params(){
+  if(param > funcparams->numParams){
+    char message[ 100 ];
+    sprintf( message, "Function call needs %d params\n", funcparams->numParams ); 
+    yyerror( message );
+  }
+}
+/*------------------------------------------------------------------------- 
+Store parameter of a function
+-------------------------------------------------------------------------*/ 
+void process_param(){
+    gen_code( STORE, funcparams->params[param] );
+    param++; 
+}
+/*------------------------------------------------------------------------- 
+Store the value of the return variable of a function
+-------------------------------------------------------------------------*/ 
+void check_return(){
+  if(strcmp(actual_func,"_GLOBAL")==0){
+    char message[ 100 ];
+    sprintf( message, "Unnecessary return at main\n" ); 
+    yyerror( message );
+  }
+  else{
+    install_return(actual_func);
+    gen_code( STORE,context_check(get_return_variable(actual_func)));
+  }
+}
+/*------------------------------------------------------------------------- 
+Assign the value of the return variable to a variable
+-------------------------------------------------------------------------*/ 
+void assign_return_value(char* var){
+  gen_code(LD_VAR, context_check(get_return_variable(idf)));
+  gen_code(STORE,context_check(var));
 }
 
 /*========================================================================= 
@@ -194,12 +232,12 @@ params : INTEGER { param++; }  dec_variable
     | params ',' INTEGER { param++; } dec_variable   
 ;
 
-function_call : IDENTIFIER { idf = strdup($1);params = getparams($1);param = 0; }'(' function_call_params  ')' { gen_code( CALL, check_function($1) );set_scope($1);param = 0; }
+function_call : IDENTIFIER { idf = strdup($1);funcparams = getparams($1);param = 0; }'(' function_call_params  ')' { check_params();gen_code( CALL, check_function($1) );set_scope($1);param = 0; }
 ;
 
 function_call_params : /* empty */
-    | exp                           { gen_code( STORE, params[param] );param++; } 
-    | function_call_params ',' exp  { gen_code( STORE, params[param] );param++; } 
+    | exp                           { process_param(); } 
+    | function_call_params ',' exp  { process_param(); } 
 ;
 /*========================================================================= 
 PROGRAM RULES for the Simple language 
@@ -244,8 +282,8 @@ command : SKIP
    bool_exp { $1->for_jmp_false = reserve_loc(); } DO commands END { gen_code( GOTO, $1->for_goto ); 
    back_patch( $1->for_jmp_false, JMP_FALSE, gen_label() ); } 
    | function_call { }
-   | variable ASSGNOP function_call { gen_code(LD_VAR, context_check(get_return_variable(idf)));gen_code(STORE,context_check($1));}
-   | RETURN exp { install_return(actual_func);gen_code( STORE,context_check(get_return_variable(actual_func)));}
+   | variable ASSGNOP function_call { assign_return_value($1); }
+   | RETURN exp { check_return(); }
 ;
 
 bool_exp : exp '<' exp { gen_code( LT, 0 ); } 

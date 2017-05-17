@@ -13,9 +13,14 @@ struct symrec
 }; 
 typedef struct symrec symrec; 
 
+struct params 
+{ 
+  int numParams;
+  int* params;
+}; 
+typedef struct params params; 
+
 symrec * getsym (char *sym_name,char* function);
-symrec * putsym (char *sym_name);
 symrec * putfunc (char *func_name, int label);
-symrec * putsymfunc (char *sym_name, char *function);
-symrec * putparam (char *sym_name, char *function,int param);
-int* getparams(char *func_name);
+symrec * putsym (char *sym_name, char *function, int param);
+params * getparams(char *func_name);
