@@ -46,39 +46,17 @@ void set_scope(char* func_name){
 /*------------------------------------------------------------------------- 
 Install identifier & check if previously defined. 
 -------------------------------------------------------------------------*/ 
-void install ( char *sym_name,char *actual_func, int param) 
+void install ( char *sym_name,char *actual_func, int size, int param) 
 { 
   symrec *s = getsym (sym_name,actual_func);
   if (s == 0)
-    s = putsym (sym_name,actual_func,param); 
+    s = putsym (sym_name,actual_func,size,param); 
   else { 
     char message[ 100 ];
     sprintf( message, "%s is already defined\n", sym_name ); 
     yyerror( message );
   } 
 } 
-
-/*------------------------------------------------------------------------- 
-Install array identifier & check if previously defined. 
--------------------------------------------------------------------------*/ 
-void install_array( char *sym_name, int size,char *actual_func,int param){
-  symrec *s = getsym (sym_name,actual_func); 
-  if (s == 0) {
-    int i;
-    for(i = 0;i != size;i++){
-      idf = strdup(sym_name);
-      sprintf(idf,"%s[%d]",sym_name,i);
-      install(idf,actual_func,param);
-      free(idf);
-    }
-  }
-  else { 
-    char message[ 100 ];
-    sprintf( message, "%s is already defined\n", sym_name ); 
-    yyerror( message );
-  } 
-  
-}
 
 /*------------------------------------------------------------------------- 
 If identifier is defined, generate code 
@@ -89,15 +67,6 @@ int context_check( char *sym_name )
   return identifier->offset;
 } 
 
-/*------------------------------------------------------------------------- 
-If array identifier is defined, return variable
--------------------------------------------------------------------------*/ 
-char* check_array( char *sym_name, int offset,char *actual_func){
-  idf = strdup(sym_name);
-  sprintf(idf,"%s[%d]",sym_name,offset);
-  getsym (sym_name,actual_func);
-  return strdup(idf);
-}
 /*------------------------------------------------------------------------- 
 If function identifier is defined, return label
 -------------------------------------------------------------------------*/ 
@@ -117,7 +86,7 @@ Define function return variable
 void install_return(char* func){
   idf = strdup(func);
   sprintf(idf,"_RETURN_%s",func);
-  install(idf,"_GLOBAL",param);
+  install(idf,"_GLOBAL",1,param);
   free(idf);
 }
 /*------------------------------------------------------------------------- 
@@ -173,6 +142,13 @@ void check_return(){
 }
 /*------------------------------------------------------------------------- 
 Assign the value of the return variable to a variable
+-------------------------------------------------------------------------*/ 
+Type type(char* sym_name){
+  symrec *identifier = getsym( sym_name,actual_func );
+  return identifier->type;
+}
+/*------------------------------------------------------------------------- 
+Returns the type of a function
 -------------------------------------------------------------------------*/ 
 void assign_return_value(char* var){
   gen_code(LD_VAR, context_check(get_return_variable(idf)));
@@ -259,11 +235,11 @@ id_seq : /* empty */
     | id_seq dec_variable ',' { } 
 ; 
 
-dec_variable : IDENTIFIER '[' NUMBER ']' { install_array( $1, $3, actual_func, param ); }
-    | IDENTIFIER { install( $1,actual_func, param ); } 
+dec_variable : IDENTIFIER '[' NUMBER ']' { install( $1, actual_func, $3, param ); }
+    | IDENTIFIER { install( $1,actual_func, 1, param ); } 
 ; 
 
-variable : IDENTIFIER '[' NUMBER ']' { $$ = check_array( $1, $3, actual_func); }
+variable : IDENTIFIER { gen_code( LD_INT, context_check( $1 )); } '[' exp ']' { }
     | IDENTIFIER { } 
 ; 
 
@@ -275,7 +251,7 @@ commands : /* empty */
 command : SKIP 
    | READ variable { gen_code( READ_INT, context_check( $2 ) ); } 
    | WRITE exp { gen_code( WRITE_INT, 0 ); } 
-   | variable ASSGNOP exp { gen_code( STORE, context_check( $1 ) ); } 
+   | variable ASSGNOP exp { if(type($1) != IntArray){gen_code( STORE, context_check( $1 ) );}else{gen_code( STORE_SUB, 0 );} } 
    | IF bool_exp { $1 = (struct lbs *) newlblrec(); $1->for_jmp_false = reserve_loc(); } 
    THEN commands { $1->for_goto = reserve_loc(); } ELSE { 
      back_patch( $1->for_jmp_false, JMP_FALSE, gen_label() ); 
@@ -294,7 +270,8 @@ bool_exp : exp '<' exp { gen_code( LT, 0 ); }
 ;
 
 exp : NUMBER { gen_code( LD_INT, $1 ); } 
-   | variable { gen_code( LD_VAR, context_check( $1 ) ); } 
+   | IDENTIFIER { gen_code( LD_VAR, context_check( $1 ) ); }
+   | IDENTIFIER '[' exp ']' { gen_code( LD_INT, context_check( $1 ));gen_code( LD_SUB, 0 ); }
    | exp '+' exp { gen_code( ADD, 0 ); } 
    | exp '-' exp { gen_code( SUB, 0 ); } 
    | exp '*' exp { gen_code( MULT, 0 ); } 

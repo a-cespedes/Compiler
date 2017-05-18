@@ -39,12 +39,13 @@ symrec * putfunc (char *func_name, int label)
   ptr->function = (char *) malloc (strlen(func_name)+1); 
   strcpy (ptr->function,func_name); 
   ptr->label = label; 
+  ptr->type = Function;
   ptr->next = (struct symrec *)sym_table; 
   sym_table = ptr; 
   return ptr; 
 } 
 
-symrec * putsym (char *sym_name, char *function,int param) 
+symrec * putsym (char *sym_name, char *function, int size, int param) 
 { 
   symrec *ptr; 
   ptr = (symrec *) malloc (sizeof(symrec)); 
@@ -52,9 +53,13 @@ symrec * putsym (char *sym_name, char *function,int param)
   strcpy (ptr->name,sym_name); 
   printf("%s %s %d\n",sym_name, function,param);
   ptr->offset = data_location();
+  int i;
+  for(i=1;i!=size;i++)
+    data_location();
   ptr->function = (char *) malloc (strlen(function)+1); 
   strcpy (ptr->function,function); 
   ptr->param = param;
+  if(size == 1)ptr->type = Integer;else ptr->type = IntArray;
   ptr->next = (struct symrec *)sym_table; 
   sym_table = ptr; 
   return ptr; 

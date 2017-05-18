@@ -35,12 +35,12 @@ char ch;
 void fetch_execute_cycle() 
 { 
   do { 
-#ifndef NDEBUG    
+//#ifndef NDEBUG    
     int i;
     printf( "PC = %3d IR.op = %-8s IR.arg = %8d AR = %3d Top = %3d,%8d\n", 
 	    pc, op_name[(int) ir.op], ir.arg, ar, top, stack[top]); 
     for( i = 0; i <= top; i++ ) printf("%2d: |%3d|\n", i, stack[i]);
-#endif
+//#endif
     /* Fetch */ 
     ir = code[pc++]; 
     /* Execute */ 
@@ -89,8 +89,8 @@ void fetch_execute_cycle()
     case LD_SUB : stack[top-1] = stack[ stack[top] + stack[top-1] ];
       top--;
       break;
-    case STORE_SUB : stack[ stack[top] + stack[top-1] ] = stack[top-2];
-      top -= 2;
+    case STORE_SUB : stack[ stack[top-2] + stack[top-1] ] = stack[top];
+      top -= 3;
       break;
     default : printf( "%d Internal Error: Memory Dump\n", ir.op ); 
       break; 
