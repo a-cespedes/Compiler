@@ -6,12 +6,16 @@ Modified by: Jordi Planes
 
 %option nounput
 %option noinput
-%x comment
+%x comment incl
 %{ 
 /*========================================================================= 
 C-libraries and Token definitions 
 =========================================================================*/ 
 int line_num = 1;
+YY_BUFFER_STATE stack[5];
+int stack_pos = 0;
+void processInclude();
+void begin();
 #include <string.h> /* for strdup */ 
 #include <stdlib.h> /* for atoi */ 
 #include "senzillc.tab.h" /* for token definitions and yylval */ 
@@ -51,10 +55,32 @@ write                   { return(WRITE); }
 <comment>"*"+[^*/\n]*   
 <comment,INITIAL>\n     ++line_num;printf("%d\n",line_num);
 <comment>"*"+"/"        BEGIN(INITIAL);
-[ \t]+                  /* eat up whitespace */ 
+[ \t]+                  /* eat up whitespace */
+include" "	            BEGIN(incl);
+<incl>{ID}".sz"         processInclude();BEGIN(INITIAL);
+<<EOF>>                 begin();
 .                       { return(yytext[0]);} 
 
 %% 
+
+void begin(){
+    stack_pos--;
+    if(stack_pos >= 0){
+        yy_delete_buffer(YY_CURRENT_BUFFER);
+        yy_switch_to_buffer(stack[stack_pos]);
+    }
+    else{
+        exit(0);
+    }
+}
+
+void processInclude(){
+    stack[stack_pos] = YY_CURRENT_BUFFER;
+    stack_pos++;
+    yyin = fopen(&yytext[0],"r");
+    yy_switch_to_buffer(yy_create_buffer(yyin, YY_BUF_SIZE));
+    BEGIN(INITIAL);
+}
 
 int yywrap(void){ 
    return 1; 

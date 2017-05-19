@@ -20,6 +20,7 @@ int yyerror(char *);
 int yylex();
 char *idf;
 char *actual_func = "_GLOBAL";
+char message[ 100 ];
 int errors; /* Error Count */ 
 int label = 1;
 int param = 0;
@@ -52,7 +53,6 @@ void install ( char *sym_name,char *actual_func, int size, int param)
   if (s == 0)
     s = putsym (sym_name,actual_func,size,param); 
   else { 
-    char message[ 100 ];
     sprintf( message, "%s is already defined\n", sym_name ); 
     yyerror( message );
   } 
@@ -73,9 +73,6 @@ If function identifier is defined, return label
 int check_function(char* func_name){
   symrec *s = getsym(func_name,func_name);
   if(!s){
-    char message[ 100 ];
-    sprintf( message, "Function %s is not defined\n", func_name ); 
-    yyerror( message );
     return -1;
   }
   else {return s->label;}
@@ -93,9 +90,8 @@ void install_return(char* func){
 Return the return variable of a function
 -------------------------------------------------------------------------*/ 
 char* get_return_variable(char* func){
-  symrec *s = getsym (func,"_GLOBAL");
-  if (s == 0){
-    char message[ 100 ];
+  int retval = check_function(func);
+  if(retval == -1){
     sprintf( message, "Function %s is not defined\n", func ); 
     yyerror( message );
     return "";
@@ -112,7 +108,6 @@ Check parameters of a function
 -------------------------------------------------------------------------*/ 
 void check_params(){
   if(param != funcparams->numParams){
-    char message[ 100 ];
     sprintf( message, "Function %s called with %d params, %d are needed\n",idf,param,funcparams->numParams ); 
     yyerror( message );
   }
@@ -121,7 +116,7 @@ void check_params(){
 Store parameter of a function
 -------------------------------------------------------------------------*/ 
 void process_param(){
-  if(param <= funcparams->numParams){
+  if((param <= funcparams->numParams) & (funcparams->numParams > 0)){
     gen_code( STORE, funcparams->params[param] );
     param++; 
   }
@@ -131,7 +126,6 @@ Store the value of the return variable of a function
 -------------------------------------------------------------------------*/ 
 void check_return(){
   if(strcmp(actual_func,"_GLOBAL")==0){
-    char message[ 100 ];
     sprintf( message, "Unnecessary return at main\n" ); 
     yyerror( message );
   }
@@ -151,8 +145,10 @@ Type type(char* sym_name){
 Returns the type of a function
 -------------------------------------------------------------------------*/ 
 void assign_return_value(char* var){
-  gen_code(LD_VAR, context_check(get_return_variable(idf)));
-  gen_code(STORE,context_check(var));
+  if(strcmp(get_return_variable(idf),"") != 0){
+    gen_code(LD_VAR, context_check(get_return_variable(idf)));
+    gen_code(STORE, context_check(var));
+  }
 }
 
 /*========================================================================= 
