@@ -69,6 +69,11 @@ int context_check( char *sym_name )
     yyerror( message );
     return -1; 
   }
+  else if(identifier->type != Integer && identifier->type != IntArray){
+    sprintf( message, "Var %s is not an expression\n", sym_name); 
+    yyerror( message );
+    return -1; 
+  }
   else return identifier->offset;
 } 
 
@@ -144,8 +149,28 @@ Assign the value of the return variable to a variable
 -------------------------------------------------------------------------*/ 
 Type type(char* sym_name){
   symrec *identifier = getsym( sym_name,actual_func );
-  return identifier->type;
+  if(identifier == 0){
+    return Unknown;
+  }
+  else return identifier->type;
 }
+
+void check_type(char *var){
+  int offset = context_check(var);
+  if(offset != -1){
+    if(type(var) == Integer){
+      gen_code( STORE, offset);
+    }
+    else if(type(var) == IntArray){
+      gen_code( STORE_SUB, 0 );
+    }
+    else{
+      sprintf( message, "Var %s cannot be assigned to an expression\n", var); 
+      yyerror( message );
+    }
+  }
+}
+
 /*------------------------------------------------------------------------- 
 Returns the type of a function
 -------------------------------------------------------------------------*/ 
@@ -260,8 +285,8 @@ dec_variable : IDENTIFIER '[' NUMBER ']' { install( $1, actual_func, $3, param )
     | IDENTIFIER { install( $1,actual_func, 1, param ); } 
 ; 
 
-variable : IDENTIFIER { gen_code( LD_INT, context_check( $1 )); } '[' exp ']' { }
-    | IDENTIFIER { } 
+variable : IDENTIFIER { gen_code( LD_INT, context_check( $1 )); } '[' exp ']' { $$ = $1; }
+    | IDENTIFIER { $$ = $1; } 
 ; 
 
 commands : /* empty */ 
@@ -272,7 +297,7 @@ commands : /* empty */
 command : SKIP 
    | READ variable { gen_code( READ_INT, context_check( $2 ) ); } 
    | WRITE exp { gen_code( WRITE_INT, 0 ); } 
-   | variable ASSGNOP exp { if(type($1) != IntArray){gen_code( STORE, context_check( $1 ) );}else{gen_code( STORE_SUB, 0 );} } 
+   | variable ASSGNOP exp { check_type($1); } 
    | IF bool_exp { $1 = (struct lbs *) newlblrec(); $1->for_jmp_false = reserve_loc(); } 
    THEN commands { $1->for_goto = reserve_loc(); } ELSE { 
      back_patch( $1->for_jmp_false, JMP_FALSE, gen_label() ); 

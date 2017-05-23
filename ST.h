@@ -2,7 +2,7 @@
 SYMBOL TABLE RECORD 
 -------------------------------------------------------------------------*/ 
 
-typedef enum { IntArray, Integer, Function } Type;
+typedef enum { IntArray, Integer, Function, Unknown } Type;
 
 struct symrec 
 { 
