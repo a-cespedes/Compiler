@@ -64,7 +64,12 @@ If identifier is defined, generate code
 int context_check( char *sym_name ) 
 { 
   symrec *identifier = getsym( sym_name,actual_func );
-  return identifier->offset;
+  if(identifier == 0){
+    sprintf( message, "Variable %s is not defined\n", sym_name); 
+    yyerror( message );
+    return -1; 
+  }
+  else return identifier->offset;
 } 
 
 /*------------------------------------------------------------------------- 
@@ -80,11 +85,12 @@ int check_function(char* func_name){
 /*------------------------------------------------------------------------- 
 Define function return variable
 -------------------------------------------------------------------------*/ 
-void install_return(char* func){
+int install_return(char* func){
   idf = strdup(func);
   sprintf(idf,"_RETURN_%s",func);
-  install(idf,"_GLOBAL",1,param);
+  symrec *s = putsym(idf,"_GLOBAL",1,param);
   free(idf);
+  return s->offset;
 }
 /*------------------------------------------------------------------------- 
 Return the return variable of a function
@@ -130,8 +136,7 @@ void check_return(){
     yyerror( message );
   }
   else{
-    install_return(actual_func);
-    gen_code( STORE,context_check(get_return_variable(actual_func)));
+    gen_code(STORE, install_return(actual_func));
   }
 }
 /*------------------------------------------------------------------------- 
@@ -150,7 +155,27 @@ void assign_return_value(char* var){
     gen_code(STORE, context_check(var));
   }
 }
-
+/*------------------------------------------------------------------------- 
+Program start
+-------------------------------------------------------------------------*/ 
+void start_program(){
+  gen_code( DATA, -1 );
+  gen_code( CALL, -1 );
+  gen_code( HALT, 0 );
+}
+/*------------------------------------------------------------------------- 
+Fill data locations
+-------------------------------------------------------------------------*/
+void fill_data_locations(){
+  back_patch(0, DATA, data_location() - 1);
+  back_patch(1, CALL, gen_label());
+}
+/*------------------------------------------------------------------------- 
+Program end
+-------------------------------------------------------------------------*/ 
+void end_program(){
+  gen_code( RET, 0 );
+}
 /*========================================================================= 
 SEMANTIC RECORDS 
 =========================================================================*/ 
@@ -206,7 +231,7 @@ params : INTEGER { param++; }  dec_variable
     | params ',' INTEGER { param++; } dec_variable   
 ;
 
-function_call : IDENTIFIER { idf = strdup($1);funcparams = getparams($1);param = 0; }'(' function_call_params  ')' { check_params();gen_code( CALL, check_function($1) );set_scope($1);param = 0; }
+function_call : IDENTIFIER { idf = strdup($1);funcparams = getparams($1);param = 0; }'(' function_call_params  ')' { check_params();gen_code( CALL, check_function($1) );param = 0; }
 ;
 
 function_call_params : /* empty */
@@ -216,11 +241,11 @@ function_call_params : /* empty */
 /*========================================================================= 
 PROGRAM RULES for the Simple language 
 =========================================================================*/ 
-program : { gen_code( DATA, -1 );gen_code( CALL, -1 );gen_code( HALT, 0 ); }functions main { YYACCEPT; }
+program : { start_program(); }functions main { YYACCEPT; }
 ; 
 
-main : LET declarations IN { back_patch(0, DATA, data_location() - 1);back_patch( 1, CALL, gen_label()); } 
-          commands END { gen_code( RET, 0 ); }
+main : LET declarations IN { fill_data_locations(); } 
+          commands END { end_program(); }
 ;
 
 declarations : /* empty */ 

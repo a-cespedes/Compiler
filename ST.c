@@ -67,26 +67,12 @@ symrec * putsym (char *sym_name, char *function, int size, int param)
 
 symrec * getsym (char *sym_name,char* function) 
 { 
-  symrec *ptr,*global = NULL; 
+  symrec *ptr; 
   for ( ptr = sym_table;ptr != (symrec *) 0;ptr = (symrec *)ptr->next ){
-    if (strcmp (ptr->name,sym_name) == 0 && strcmp(ptr->function,function) == 0){
-      return ptr; }
-    else if (strcmp (ptr->name,sym_name) == 0){
-      global = malloc(sizeof(symrec));
-      global->name = (char *) malloc (strlen(ptr->name)+1); 
-      strcpy (global->name,ptr->name); 
-      global->offset = ptr->offset;
-      global->function = (char *) malloc (strlen(ptr->function)+1); 
-      strcpy(global->function,ptr->function); 
-      global->param = ptr->param;
-    }
+    if (strcmp (ptr->name,sym_name) == 0 && strcmp(ptr->function,function) == 0)
+      return ptr; 
   }
-  if(global){
-    return global;
-  }
-  else{
-    return NULL;
-  }
+  return ptr;
 } 
 
 params * getparams(char *func_name){
