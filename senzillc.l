@@ -42,6 +42,7 @@ fi                      { return(FI); }
 if                      { return(IF); } 
 in                      { return(IN); } 
 integer                 { return(INTEGER); } 
+length                  { return(LENGTH); } 
 let                     { return(LET); } 
 read                    { return(READ); } 
 return                  { return(RETURN); } 

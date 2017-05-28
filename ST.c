@@ -58,6 +58,7 @@ symrec * putsym (char *sym_name, char *function, int size, int param)
     data_location();
   ptr->function = (char *) malloc (strlen(function)+1); 
   strcpy (ptr->function,function); 
+  ptr->size = size;
   ptr->param = param;
   if(size == 1)ptr->type = Integer;else ptr->type = IntArray;
   ptr->next = (struct symrec *)sym_table; 

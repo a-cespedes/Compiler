@@ -9,6 +9,7 @@ struct symrec
   char *name; /* name of symbol */ 
   int offset; /* data offset */ 
   int label; /* function label*/ 
+  int size; /* data size*/ 
   char *function; /*symbol function*/ 
   int param; /*param order in function*/
   Type type; /*symbol type*/

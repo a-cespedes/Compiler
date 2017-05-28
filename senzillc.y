@@ -180,6 +180,11 @@ void assign_return_value(char* var){
     gen_code(STORE, context_check(var));
   }
 }
+
+int size(char* sym_name){
+  symrec *identifier = getsym( sym_name,actual_func );
+  return identifier->size;
+}
 /*------------------------------------------------------------------------- 
 Program start
 -------------------------------------------------------------------------*/ 
@@ -221,7 +226,7 @@ TOKENS
 %token <id> IDENTIFIER /* Simple identifier */ 
 %token <lbls> IF WHILE /* For backpatching labels */ 
 %token SKIP THEN ELSE FI DO END DEF RETURN
-%token INTEGER READ WRITE LET IN 
+%token INTEGER READ WRITE LET IN LENGTH
 %token ASSGNOP 
 %type <id> variable
 %type <id> dec_variable
@@ -324,6 +329,7 @@ exp : NUMBER { gen_code( LD_INT, $1 ); }
    | exp '/' exp { gen_code( DIV, 0 ); } 
    | exp '^' exp { gen_code( PWR, 0 ); } 
    | '(' exp ')' 
+   | LENGTH '(' IDENTIFIER ')' { if(context_check($3) != -1){gen_code( LD_INT, size($3));} } 
 ;
 
 %% 
