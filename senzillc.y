@@ -15,6 +15,7 @@ C Libraries, Symbol Table, Code Generator & other C code
 #include "CG.h" /* Code Generator */ 
 
 #define YYDEBUG 1 /* For Debugging */ 
+#define MAX_STRING_SIZE 16
 
 int yyerror(char *);
 int yylex();
@@ -25,6 +26,7 @@ int errors; /* Error Count */
 int label = 1;
 int param = 0;
 params* funcparams;
+Type actual_type;
 extern int line_num;
 /*------------------------------------------------------------------------- 
 The following support backpatching 
@@ -51,7 +53,7 @@ void install ( char *sym_name,char *actual_func, int size, int param)
 { 
   symrec *s = getsym (sym_name,actual_func);
   if (s == 0)
-    s = putsym (sym_name,actual_func,size,param); 
+    s = putsym (sym_name,actual_func,size,param,actual_type); 
   else { 
     sprintf( message, "%s is already defined\n", sym_name ); 
     yyerror( message );
@@ -66,11 +68,6 @@ int context_check( char *sym_name )
   symrec *identifier = getsym( sym_name,actual_func );
   if(identifier == 0){
     sprintf( message, "Variable %s is not defined\n", sym_name); 
-    yyerror( message );
-    return -1; 
-  }
-  else if(identifier->type != Integer && identifier->type != IntArray){
-    sprintf( message, "Var %s is not an expression\n", sym_name); 
     yyerror( message );
     return -1; 
   }
@@ -93,7 +90,7 @@ Define function return variable
 int install_return(char* func){
   idf = strdup(func);
   sprintf(idf,"_RETURN_%s",func);
-  symrec *s = putsym(idf,"_GLOBAL",1,param);
+  symrec *s = putsym(idf,"_GLOBAL",1,param,Integer);
   free(idf);
   return s->offset;
 }
@@ -171,6 +168,19 @@ void check_type(char *var){
   }
 }
 
+void str_type(char* var){
+  if(type(var) == String){
+    int i;
+    for(i=0;i!=MAX_STRING_SIZE;i++){
+      int c = context_check(var);
+      gen_code(STORE,c+i);
+    }
+  }
+  else{
+    sprintf( message, "Var %s cannot be assigned to an expression\n", var); 
+    yyerror( message );
+  }
+}
 /*------------------------------------------------------------------------- 
 Returns the type of a function
 -------------------------------------------------------------------------*/ 
@@ -223,10 +233,10 @@ TOKENS
 =========================================================================*/ 
 %start program 
 %token <intval> NUMBER /* Simple integer */ 
-%token <id> IDENTIFIER /* Simple identifier */ 
+%token <id> IDENTIFIER STR /* Simple identifier */ 
 %token <lbls> IF WHILE /* For backpatching labels */ 
 %token SKIP THEN ELSE FI DO END DEF RETURN
-%token INTEGER READ WRITE LET IN LENGTH
+%token INTEGER READ WRITE LET IN LENGTH STRING
 %token ASSGNOP 
 %type <id> variable
 %type <id> dec_variable
@@ -278,16 +288,20 @@ main : LET declarations IN { fill_data_locations(); }
           commands END { end_program(); }
 ;
 
+type: INTEGER { actual_type = Integer; } 
+    | STRING { actual_type = String; }
+;
+
 declarations : /* empty */ 
-    | INTEGER id_seq dec_variable '.' { } 
+    | type id_seq dec_variable '.' { } 
 ; 
 
 id_seq : /* empty */ 
     | id_seq dec_variable ',' { } 
 ; 
 
-dec_variable : IDENTIFIER '[' NUMBER ']' { install( $1, actual_func, $3, param ); }
-    | IDENTIFIER { install( $1,actual_func, 1, param ); } 
+dec_variable : IDENTIFIER '[' NUMBER ']' { actual_type = IntArray;install( $1, actual_func, $3, param ); }
+    | IDENTIFIER { if(actual_type == Integer){install( $1,actual_func, 1, param );}else install( $1,actual_func, MAX_STRING_SIZE, param ); } 
 ; 
 
 variable : IDENTIFIER { gen_code( LD_INT, context_check( $1 )); } '[' exp ']' { $$ = $1; }
@@ -302,7 +316,9 @@ commands : /* empty */
 command : SKIP 
    | READ variable { gen_code( READ_INT, context_check( $2 ) ); } 
    | WRITE exp { gen_code( WRITE_INT, 0 ); } 
+   | WRITE str_exp { gen_code( WRITE_STR, 0 ); } 
    | variable ASSGNOP exp { check_type($1); } 
+   | variable ASSGNOP str_exp { str_type($1); } 
    | IF bool_exp { $1 = (struct lbs *) newlblrec(); $1->for_jmp_false = reserve_loc(); } 
    THEN commands { $1->for_goto = reserve_loc(); } ELSE { 
      back_patch( $1->for_jmp_false, JMP_FALSE, gen_label() ); 
@@ -330,6 +346,9 @@ exp : NUMBER { gen_code( LD_INT, $1 ); }
    | exp '^' exp { gen_code( PWR, 0 ); } 
    | '(' exp ')' 
    | LENGTH '(' IDENTIFIER ')' { if(context_check($3) != -1){gen_code( LD_INT, size($3));} } 
+;
+
+str_exp: STR { int i;for(i=MAX_STRING_SIZE - 1;i != -1;i--)gen_code( LD_INT, (int)$1[i] ); }
 ;
 
 %% 

@@ -2,7 +2,7 @@
 SYMBOL TABLE RECORD 
 -------------------------------------------------------------------------*/ 
 
-typedef enum { IntArray, Integer, Function, Unknown } Type;
+typedef enum { IntArray, Integer, String, Function, Unknown } Type;
 
 struct symrec 
 { 
@@ -26,5 +26,5 @@ typedef struct params params;
 
 symrec * getsym (char *sym_name,char* function);
 symrec * putfunc (char *func_name, int label);
-symrec * putsym (char *sym_name, char *function, int size, int param);
+symrec * putsym (char *sym_name, char *function, int size, int param, Type type);
 params * getparams(char *func_name);

@@ -12,7 +12,7 @@ char *op_name[] = {"halt", "store", "jmp_false", "goto", "call", "ret",
 		   "data", "ld_int", "ld_var",
 		   "in_int", "out_int",
 		   "lt", "eq", "gt", "add", "sub", "mult", "div", "pwr",
-                   "ld_sub", "store_sub" };
+                   "ld_sub", "store_sub", "write_str" };
 
 /* CODE Array */
 struct instruction code[MAX_MEMORY];
@@ -91,6 +91,18 @@ void fetch_execute_cycle()
       break;
     case STORE_SUB : stack[ stack[top-2] + stack[top-1] ] = stack[top];
       top -= 3;
+      break;
+    case WRITE_STR : 
+      printf( "Output:");       
+      for(int i=0;i!=MAX_STRING_SIZE;i++){
+        printf( "%c", (char)stack[top]);
+        if(stack[i]==0){
+          top -= MAX_STRING_SIZE - i;
+          break;
+        }
+        top--;
+      }
+      printf("\n");
       break;
     default : printf( "%d Internal Error: Memory Dump\n", ir.op );
       break;

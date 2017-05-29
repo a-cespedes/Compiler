@@ -45,7 +45,7 @@ symrec * putfunc (char *func_name, int label)
   return ptr; 
 } 
 
-symrec * putsym (char *sym_name, char *function, int size, int param) 
+symrec * putsym (char *sym_name, char *function, int size, int param,Type type) 
 { 
   symrec *ptr; 
   ptr = (symrec *) malloc (sizeof(symrec)); 
@@ -60,7 +60,7 @@ symrec * putsym (char *sym_name, char *function, int size, int param)
   strcpy (ptr->function,function); 
   ptr->size = size;
   ptr->param = param;
-  if(size == 1)ptr->type = Integer;else ptr->type = IntArray;
+  ptr->type = type;
   ptr->next = (struct symrec *)sym_table; 
   sym_table = ptr; 
   return ptr; 

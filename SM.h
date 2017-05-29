@@ -11,7 +11,7 @@ DECLARATIONS
 enum code_ops { HALT, STORE, JMP_FALSE, GOTO, CALL, RET,
 		DATA, LD_INT, LD_VAR, 
 		READ_INT, WRITE_INT, 
-		LT, EQ, GT, ADD, SUB, MULT, DIV, PWR, LD_SUB, STORE_SUB }; 
+		LT, EQ, GT, ADD, SUB, MULT, DIV, PWR, LD_SUB, STORE_SUB, WRITE_STR }; 
 
 struct instruction 
 { 
@@ -20,6 +20,7 @@ struct instruction
 }; 
 
 #define MAX_MEMORY 999
+#define MAX_STRING_SIZE 16
 
 void fetch_execute_cycle();
 
