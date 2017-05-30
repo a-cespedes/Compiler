@@ -34,8 +34,7 @@ symrec * putfunc (char *func_name, int label)
   symrec *ptr; 
   ptr = (symrec *) malloc (sizeof(symrec)); 
   ptr->name = (char *) malloc (strlen(func_name)+1); 
-  strcpy (ptr->name,func_name);
-  printf("%s %d\n",func_name, label); 
+  strcpy (ptr->name,func_name); 
   ptr->function = (char *) malloc (strlen(func_name)+1); 
   strcpy (ptr->function,func_name); 
   ptr->label = label; 
@@ -51,7 +50,6 @@ symrec * putsym (char *sym_name, char *function, int size, int param,Type type)
   ptr = (symrec *) malloc (sizeof(symrec)); 
   ptr->name = (char *) malloc (strlen(sym_name)+1); 
   strcpy (ptr->name,sym_name); 
-  printf("%s %s %d\n",sym_name, function,param);
   ptr->offset = data_location();
   int i;
   for(i=1;i!=size;i++)

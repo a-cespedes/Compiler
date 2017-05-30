@@ -1,0 +1,10 @@
+include includetest.sz
+/* Testing include */
+let
+integer x,y,z.
+in 
+x := 3;
+y := 5;
+z := sum(x,y);
+write z;
+end

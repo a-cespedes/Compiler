@@ -1,0 +1,7 @@
+/* Testing include*/
+def sum(integer a,integer b)
+do
+   integer c.
+   c := a + b;
+   return c;
+end

@@ -1,0 +1,11 @@
+let
+   integer n[2],x. 
+in 
+read n[0]; 
+if n[0] < 10 then x := 1;else skip;fi; 
+while n[0] < 10 do x := 5*x; n[0] := n[0]+1; end; 
+   skip; 
+   write n[0]; 
+   write x; 
+end 
+

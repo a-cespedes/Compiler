@@ -1,0 +1,8 @@
+let 
+  integer l,i,a[3].
+in
+  l := length(i); 
+  write l;
+  l := length(a);
+  write l;
+end

@@ -1,0 +1,7 @@
+let
+   string s. 
+in 
+   s := "Hello World";
+   write "Hola";
+end 
+

@@ -1,0 +1,14 @@
+def sum(integer a,integer b)
+do
+   integer c.
+   c := a + b;
+   return c;
+end 
+let
+integer x,y,z.
+in 
+x := 3;
+y := 5;
+z := sum(x);
+write z;
+end

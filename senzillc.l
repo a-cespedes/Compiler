@@ -58,7 +58,7 @@ write                   { return(WRITE); }
 "/*"                    BEGIN(comment);
 <comment>[^*\n]*        
 <comment>"*"+[^*/\n]*   
-<comment,INITIAL>\n     ++line_num;printf("%d\n",line_num);
+<comment,INITIAL>\n     ++line_num;
 <comment>"*"+"/"        BEGIN(INITIAL);
 \"                      { BEGIN string;str = malloc(MAX_STRING_SIZE * sizeof(char));}
 <string>[^\\"\n]*       { strcat(str,yytext); i += yyleng;  }
